@@ -9,27 +9,28 @@
       margin: 0;
       padding: 0;
       background: transparent;
-      font-family: serif;
-      height: 100%;
+      overflow: hidden;
     }
-
+* { box-sizing: border-box; }
     body {
+      margin: 0;
+      padding: 0;              /* IMPORTANT */
       display: flex;
-      justify-content: center;   /* center horizontally */
-      align-items: flex-start;    /* keep near top */
-      padding: 60px 20px;
-      padding-top: 40px;          /* like the original spacing */
+      justify-content: center;
+      align-items: flex-start;
+    }
+    @media (min-width: 800px) {
+      body { padding-top: 40px; }
     }
 
     .container {
-      width: 100%;
-      max-width: 560px;
-      margin: 0 auto;
+      width: 560px;          /* fixed design width */
       height: 300px;
+      margin: 0 auto;
+      transform-origin: top center;
       background: #2f2f2f;
       color: #ffffff;
       border-radius: 28px;
-      box-sizing: border-box;
       padding: 28px 34px;
       display: flex;
       justify-content: space-between;
@@ -211,6 +212,7 @@
     }
 
     const grid = document.getElementById("grid");
+    
     grid.innerHTML = "";
     for (let r = 0; r < 6; r++) {
       const row = document.createElement("div");
@@ -234,7 +236,24 @@
       active.style.backgroundColor = params.font_color;
     }
   }
+  function fitToFrame() {
+    const card = document.getElementById("box"); // your container has id="box"
+    if (!card) return;
 
+    const designWidth = 560;                 // must match .container width
+    const designHeight = 300;                // set to your card height
+    
+    const available = document.documentElement.clientWidth;
+
+    const scale = Math.min(1, available / designWidth);
+    card.style.transform = `scale(${scale})`;
+
+    // Optional: reduce extra blank space (helps Notion)
+    document.body.style.height = (designHeight * scale) + "px";
+  }
+
+  window.addEventListener("resize", fitToFrame);
+  window.addEventListener("load", fitToFrame);
   // ---- init ----
   const params = getParams();
   applyTheme(params);
