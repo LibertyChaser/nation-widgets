@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Calendar Widget</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #ffffff;
+      font-family: serif;
+      height: 100%;
+    }
+
+    body {
+      display: flex;
+      justify-content: center;   /* center horizontally */
+      align-items: flex-start;    /* keep near top */
+      padding: 60px 20px;
+      padding-top: 40px;          /* like the original spacing */
+    }
+
+    .container {
+      width: 560px;              /* key: original is NOT full-width */
+      height: 300px;
+      background: #2f2f2f;
+      color: #ffffff;
+      border-radius: 28px;
+      box-sizing: border-box;
+      padding: 28px 34px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* left block */
+    #d-day {
+      width: 36%;
+      text-align: center;
+    }
+
+    #d-day h3 {
+      margin: 0 0 12px 0;
+      font-size: 44px;           /* smaller than yours */
+      font-weight: 700;
+    }
+
+    #d-day h1 {
+      margin: 0;
+      font-size: 140px;          /* smaller than yours */
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    /* right block */
+    .inner {
+      width: 60%;
+      text-align: right;
+    }
+
+    #month {
+      margin: 80px 0 6px 0;
+      font-size: 40px;           /* original is smaller */
+      font-weight: 700;
+    }
+
+    /* weekday header + grid */
+    .week-head, .week-row {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      justify-items: center;
+      align-items: center;
+      gap: 8px;                  /* tighter */
+    }
+
+    .week-head {
+      margin: 6px 0 10px 0;
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: 2px;
+    }
+
+    .week-row {
+      margin: 6px 0;
+      font-size: 24px;           /* smaller numbers */
+      font-weight: 500;
+    }
+
+    .cell {
+      width: 34px;               /* smaller circle/box */
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+    }
+
+    .active {
+      background: rgba(255, 255, 255, 0.92);
+      color: #2f2f2f;
+      font-weight: 800;
+    }
+    /* Optional: dark mode by query ?theme=dark */
+    html[theme="dark"], html[theme="dark"] body {
+      background: #191919;
+      color: #ffffff;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container" id="box">
+    <div id="d-day"></div>
+
+    <div class="inner">
+      <h2 id="month"></h2>
+      <div class="week-head" id="week-head"></div>
+      <div id="grid"></div>
+    </div>
+  </div>
+
+<script>
+  // ---- helpers ----
+  function getParams() {
+    const u = new URL(window.location.href);
+    const p = Object.fromEntries(u.searchParams.entries());
+    return p;
+  }
+
+  function applyTheme(params) {
+    if ((params.theme || "").toLowerCase() === "dark") {
+      document.documentElement.setAttribute("theme", "dark");
+    }
+  }
+
+  function applyColors(params) {
+    const box = document.getElementById("box");
+    if (params.bg_color) box.style.backgroundColor = params.bg_color;
+    if (params.font_color) box.style.color = params.font_color;
+  }
+
+  function daysInMonth(year, month1to12) {
+    return new Date(year, month1to12, 0).getDate();
+  }
+
+  function monthName(month1to12, lng) {
+    const en = ["", "January","February","March","April","May","June","July","August","September","October","November","December"];
+    const cn = ["", "一月","二月","三月","四月","五月","六月","七月","八月","九月","十月","十一月","十二月"];
+    return (lng === "cn" ? cn : en)[month1to12];
+  }
+
+  function weekdayLabel(idx0Sun, lng, short=true) {
+    const enShort = ["S","M","T","W","T","F","S"];
+    const cnShort = ["日","一","二","三","四","五","六"];
+    const enLong  = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+    const cnLong  = ["周日","周一","周二","周三","周四","周五","周六"];
+    if (short) return (lng === "cn" ? cnShort : enShort)[idx0Sun];
+    return (lng === "cn" ? cnLong : enLong)[idx0Sun];
+  }
+
+  function buildCalendar(params) {
+    const lng = (params.lng || "en").toLowerCase(); // en | cn
+    const weekStart = (params.start || "sun").toLowerCase(); // mon | sun
+
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1; // 1..12
+    const today = now.getDate();
+    const dow = now.getDay(); // 0 Sun .. 6 Sat
+
+    // Left side
+    document.getElementById("d-day").innerHTML =
+      `<h3>${weekdayLabel(dow, lng, false)}</h3><h1>${today}</h1>`;
+
+    // Month title
+    document.getElementById("month").textContent = monthName(month, lng);
+
+    // Week header
+    const head = [];
+    if (weekStart === "sun") {
+      for (let i = 0; i < 7; i++) head.push(weekdayLabel(i, lng, true));
+    } else {
+      // Monday first: 1..6 then 0
+      for (let i = 1; i <= 6; i++) head.push(weekdayLabel(i, lng, true));
+      head.push(weekdayLabel(0, lng, true));
+    }
+    document.getElementById("week-head").innerHTML = head.map(x => `<div>${x}</div>`).join("");
+
+    // Calendar grid
+    const first = new Date(year, month - 1, 1);
+    let firstDow = first.getDay(); // 0..6
+    // Convert to offset based on weekStart:
+    // - If week starts Monday, map Sunday(0) -> 6, Monday(1)->0, ..., Saturday(6)->5
+    let offset;
+    if (weekStart === "mon") {
+      offset = (firstDow === 0) ? 6 : (firstDow - 1);
+    } else {
+      offset = firstDow; // Sunday-based
+    }
+
+    const totalDays = daysInMonth(year, month);
+    const cells = [];
+    // build up to 6 rows * 7 = 42 cells (like your original)
+    for (let i = 0; i < 42; i++) cells.push("");
+
+    for (let d = 1; d <= totalDays; d++) {
+      const idx = offset + (d - 1);
+      cells[idx] = d;
+    }
+
+    const grid = document.getElementById("grid");
+    grid.innerHTML = "";
+    for (let r = 0; r < 6; r++) {
+      const row = document.createElement("div");
+      row.className = "week-row";
+      for (let c = 0; c < 7; c++) {
+        const idx = r * 7 + c;
+        const val = cells[idx];
+        const cell = document.createElement("div");
+        cell.className = "cell";
+        if (val === today) cell.classList.add("active");
+        cell.textContent = val ? String(val) : "";
+        row.appendChild(cell);
+      }
+      grid.appendChild(row);
+    }
+
+    // If user set bg/font colors, match the “active” inversion like the original
+    const active = document.querySelector(".active");
+    if (active && params.bg_color && params.font_color) {
+      active.style.color = params.bg_color;
+      active.style.backgroundColor = params.font_color;
+    }
+  }
+
+  // ---- init ----
+  const params = getParams();
+  applyTheme(params);
+  applyColors(params);
+  buildCalendar(params);
+</script>
+</body>
+</html>
