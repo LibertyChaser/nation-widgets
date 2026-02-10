@@ -8,7 +8,7 @@
     html, body {
       margin: 0;
       padding: 0;
-      background: #ffffff;
+      background: transparent;
       font-family: serif;
       height: 100%;
     }
@@ -22,7 +22,9 @@
     }
 
     .container {
-      width: 560px;              /* key: original is NOT full-width */
+      width: 100%;
+      max-width: 560px;
+      margin: 0 auto;
       height: 300px;
       background: #2f2f2f;
       color: #ffffff;
